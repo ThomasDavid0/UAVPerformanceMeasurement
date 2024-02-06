@@ -16,7 +16,7 @@ function Point.new(p)
         return _p:z()
     end
     function self.copy()
-        return Point.xyz(self:x(), self:y(), self:z())
+        return Point.xyz(_p:x(), _p:y(), _p:z())
     end
     function self.p()
         return _p
@@ -26,8 +26,8 @@ function Point.new(p)
         return _p:length()
     end
 
-    function self.scale(f)
-        return Point.xyz(_p:x()*f, _p:y()*f, _p:z()*f)
+    function self.scale(value)
+        return Point.xyz(_p:x() * value, _p:y() * value, _p:z() * value)
     end
 
     function self.unit()

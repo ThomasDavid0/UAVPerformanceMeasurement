@@ -1,4 +1,6 @@
-local g = require('geometry')
+
+local P = require('geometry/point')
+local Q = require('geometry/quaternion')
 local c = require('controller')
 
 local State = {}
@@ -12,10 +14,10 @@ function State.new(pos, att, arspd, vel, acc, wind)
     local _acc = acc
     local _wind = wind
 
-    local _hv = g.quat_earth_to_body(_att, g.makeVector3f(1,0,0))
+    local _hv = _att.transform_point(P.xyz(1,0,0))
     local _yaw = math.atan(_hv:y(), _hv:x())
     local _pitch = -math.atan(_hv:z(), math.sqrt(_hv:x() * _hv:x() + _hv:y() * _hv:y()))
-    local _roll_angle = g.body_axis_rates(g.qorient(0, _pitch, _yaw), _att):x()
+    local _roll_angle = Q.body_axis_rates(Q.euler(P.xyz(0, _pitch, _yaw)), _att):x()
     
     function self.pos()
         return _pos
@@ -51,12 +53,12 @@ end
 
 function State.readCurrent()
     return State.new(
-        ahrs:get_relative_position_NED_origin(),
-        ahrs:get_quaternion(),
+        P.new(ahrs:get_relative_position_NED_origin()),
+        Q.new(ahrs:get_quaternion()),
         c.constrain(ahrs:get_EAS2TAS() * math.max(ahrs:airspeed_estimate(), 3), 3, 100),
-        ahrs:get_velocity_NED(),
-        ahrs:get_accel(),
-        ahrs:wind_estimate()
+        P.new(ahrs:get_velocity_NED()),
+        P.new(ahrs:get_accel()),
+        P.new(ahrs:wind_estimate())
     )
 end
 

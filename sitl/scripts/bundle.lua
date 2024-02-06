@@ -92,132 +92,167 @@ files['controller'] = function(...)
     
     return controller
 end
-files['geometry'] = function(...)
-    local g = {}
+files['geometry/point'] = function(...)
     
-    function g.makeVector3f(x, y, z)
-        local vec = Vector3f()
-        vec:x(x)
-        vec:y(y)
-        vec:z(z)
-        return vec
+    
+    local Point = {}
+    
+    function Point.new(p)
+        local self = {}
+        local _p = p
+    
+        function self.x()
+            return _p:x()
+        end
+        function self.y()
+            return _p:y()
+        end
+        function self.z()
+            return _p:z()
+        end
+        function self.copy()
+            return Point.xyz(self:x(), self:y(), self:z())
+        end
+        function self.p()
+            return _p
+        end
+    
+        function self.length()
+            return _p:length()
+        end
+    
+        function self.scale(value)
+            return Point.xyz(self.x() * value, self.y() * value, self.z() * value)
+        end
+    
+        function self.unit()
+            return Point.new(self.scale(1/self.length()))
+        end
+    
+        return self
     end
     
-    function g.vec_mul(v, s)
-        return g.makeVector3f(v:x() * s, v:y() * s, v:z() * s)
+    function Point.xyz(x, y, z)
+        local vo = Vector3f()
+        vo:x(x)
+        vo:y(y)
+        vo:z(z)
+        return Point.new(vo)
     end
     
-    function g.makeQuaternion(w, x, y, z)
+    function Point.add(p1, p2)
+        return Point.xyz(p1:x() + p2:x(), p1:y() + p2:y(), p1:z() + p2:z())
+    end
+    
+    function Point.sub(p1, p2)
+        return Point.xyz(p1:x() - p2:x(), p1:y() - p2:y(), p1:z() - p2:z())
+    end
+    
+    function Point.dot(p1, p2)
+        return p1:x()*p2:x() + p1:y()*p2:y() + p1:z()*p2:z()
+    end
+    
+    function Point.cross(p1, p2)
+        return Point.xyz(p1:y()*p2:z() - p1:z()*p2:y(), p1:z()*p2:x() - p1:x()*p2:z(), p1:x()*p2:y() - p1:y()*p2:x())
+    end
+    
+    
+    return Point
+end
+files['geometry/quaternion'] = function(...)
+    
+    local Point = require('geometry/point')
+    
+    local Quat = {}
+    
+    
+    function Quat.new(q)
+        local self = {}
+        local _q = q
+    
+        function self.w()
+            return _q:q1()
+        end
+        function self.x()
+            return _q:q2()
+        end
+        function self.y()
+            return _q:q3()
+        end
+        function self.z()
+            return _q:q4()
+        end
+        function self.q1()
+            return _q:q1()
+        end
+        function self.q2()
+            return _q:q2()
+        end
+        function self.q3()
+            return _q:q3()
+        end
+        function self.q4()
+            return _q:q4()
+        end
+        function self.q()
+            return _q
+        end
+        function self.copy()
+            return Quat.wxyz(self.q1(), self.q2(), self.q3(), self.q4())
+        end
+        function self.inverse()
+            return Quat.new(_q:inverse())
+        end
+        function self.transform_point(v)
+            local vo = v.copy()
+            _q:earth_to_body(vo:p())
+            return vo
+        end
+        function self.axis()
+            return Point.xyz(self:x(), self:y(), self:z())
+        end
+        function self.conjugate()
+            return Quat.wxyz(self.w(), -self.x(), -self.y(), -self.z())
+        end
+        function self.to_axis_angle()
+            local vo = Vector3f()
+            _q:to_axis_angle(vo)
+            return Point.new(vo)
+        end
+        return self
+    end
+    
+    function Quat.wxyz(w, x, y, z)
         local q = Quaternion()
         q:q1(w)
         q:q2(x)
-        q:q3(y)  
+        q:q3(y)
         q:q4(z)
-        return q
+        return Quat.new(q)
+    end
+    function Quat.euler(p)
+        local _q = Quaternion()
+        _q:from_euler(p.x(), p.y(), p.z())
+        return Quat.new(_q)
+    end
+    function Quat.euldeg(p)
+        return Quat.euler(p.xyz(math.rad(p.x()), math.rad(p.y()), math.rad(p.z())))
+    end
+    function Quat.mul(a, b)
+        local w = a.w() * b.w() - Point.dot(a.axis(), b.axis())
+        local xyz = b.axis().scale(a.w()) + a.axis().scale(b.w()) + Point.cross(a.axis(), b.axis())
+        return Quat.wxyz(w, xyz.x(), xyz.y(), xyz.z())
+    end
+    function Quat.body_axis_rates(a, b)
+        return Quat.mul(a.conjugate(), b).normalize().to_axis_angle()
     end
     
-    function g.quat_log(name, q)
-        logger.write(
-            name, 'w,x,y,z', 'ffff',
-            q:q1(), q:q2(), q:q3(), q:q4()
-        )
-    end
-    
-    function g.qorient(roll, pitch, yaw)
-        local q = Quaternion()
-        q:from_euler(roll, pitch, yaw)
-        return q
-    end
-    
-    
-    function g.qorient_deg(roll_deg, pitch_deg, yaw_deg)
-        local q = Quaternion()
-        q:from_euler(math.rad(roll_deg), math.rad(pitch_deg), math.rad(yaw_deg))
-        return q
-    end
-    
-    function g.quat_earth_to_body(quat, v)
-        local v2 = v:copy()
-        quat:earth_to_body(v2)
-        return v2
-    end
-    
-    function g.quat_body_to_earth(quat, v)
-        local v2 = v:copy()
-        quat:inverse():earth_to_body(v2)
-        return v2
-    end
-    
-    function g.quat_copy(q)
-        return q:inverse():inverse()
-    end
-    
-    function g.angle_between(v1, v2)
-        return v1:angle(v2)
-    end
-    
-    
-    function g.quat_axis(q)
-        local q2 = g.quat_copy(q)
-        return g.makeVector3f(q2:q2(),q2:q3(),q2:q4())
-    end
-    
-    function g.quat_conjugate(q)
-        local q2 = g.quat_copy(q)
-        return g.makeQuaternion(q2:q1(), -q2:q2(), -q2:q3(), -q2:q4())
-    end
-    
-    function g.quat_mul(a, b)
-        local w = a:q1() * b:q1() - g.quat_axis(a):dot(g.quat_axis(b))
-        local xyz = g.vec_mul(g.quat_axis(b), a:q1())  + g.vec_mul(g.quat_axis(a), b:q1()) + g.quat_axis(a):cross(g.quat_axis(b))
-        return g.makeQuaternion(w, xyz:x(), xyz:y(), xyz:z())
-    end
-    
-    function g.body_axis_rates(a,b)
-        local q = g.quat_mul(g.quat_conjugate(a), b)
-        q:normalize()
-        local vo = Vector3f()
-        q:to_axis_angle(vo)
-        return vo
-    end
-    
-    --[[
-       get quaternion rotation between vector1 and vector2
-       with thanks to https://stackoverflow.com/questions/1171849/finding-quaternion-representing-the-rotation-from-one-vector-to-another
-    --]]
-    function g.vectors_to_quat_rotation(vector1, vector2)
-        local v1 = vector1:copy()
-        local v2 = vector2:copy()
-        v1:normalize()
-        v2:normalize()
-        local dot = v1:dot(v2)
-        local a = v1:cross(v2)
-        local w = 1.0 + dot
-        local q = Quaternion()
-        q:q1(w)
-        q:q2(a:x())
-        q:q3(a:y())
-        q:q4(a:z())
-        q:normalize()
-        return q
-     end
-    
-     -- convert a quaternion to axis angle form
-    function g.to_axis_and_angle(quat)
-        local axis_angle = Vector3f()
-        quat:to_axis_angle(axis_angle)
-        local angle = axis_angle:length()
-        if angle < 0.00001 then
-           return g.makeVector3f(1.0, 0.0, 0.0), 0.0
-        end
-        return axis_angle:scale(1.0/angle), angle
-     end
-    
-    
-     return g
+    return Quat
 end
 files['state'] = function(...)
-    local g = require('geometry')
+    
+    local P = require('geometry/point')
+    local Q = require('geometry/quaternion')
     local c = require('controller')
     
     local State = {}
@@ -231,10 +266,10 @@ files['state'] = function(...)
         local _acc = acc
         local _wind = wind
     
-        local _hv = g.quat_earth_to_body(_att, g.makeVector3f(1,0,0))
+        local _hv = _att.transform_point(P.xyz(1,0,0))
         local _yaw = math.atan(_hv:y(), _hv:x())
         local _pitch = -math.atan(_hv:z(), math.sqrt(_hv:x() * _hv:x() + _hv:y() * _hv:y()))
-        local _roll_angle = g.body_axis_rates(g.qorient(0, _pitch, _yaw), _att):x()
+        local _roll_angle = Q.body_axis_rates(Q.euler(P.xyz(0, _pitch, _yaw)), _att):x()
         
         function self.pos()
             return _pos
@@ -270,12 +305,12 @@ files['state'] = function(...)
     
     function State.readCurrent()
         return State.new(
-            ahrs:get_relative_position_NED_origin(),
-            ahrs:get_quaternion(),
+            P.new(ahrs:get_relative_position_NED_origin()),
+            Q.new(ahrs:get_quaternion()),
             c.constrain(ahrs:get_EAS2TAS() * math.max(ahrs:airspeed_estimate(), 3), 3, 100),
-            ahrs:get_velocity_NED(),
-            ahrs:get_accel(),
-            ahrs:wind_estimate()
+            P.new(ahrs:get_velocity_NED()),
+            P.new(ahrs:get_accel()),
+            P.new(ahrs:wind_estimate())
         )
     end
     
@@ -365,7 +400,7 @@ files['turn'] = function(...)
 end
 
 local controller = require('controller')
-local g = require('geometry')
+local P = require('geometry/point')
 local State = require('state')
 local t = require('turn')
 
@@ -387,13 +422,12 @@ function update()
             if active_turn then
                 local current_state = State.readCurrent()
 
-                local thr = speed_controller.update(active_turn:arspd(), current_state.arspd())
+                local thr = speed_controller.update(active_turn:arspd(), current_state:arspd())
 
                 local roll = roll_controller.update(active_turn.roll_angle()*180/math.pi, current_state.roll_angle() * 180 / math.pi)
                 
                 local w_z_err = (active_turn.alt() - current_state.pos():z()) / math.cos(current_state.roll_angle())
-                local b_z_err = g.quat_earth_to_body(current_state.att(), g.makeVector3f(0,0,w_z_err)):z()
-               
+                local b_z_err = current_state.att().transform_point(P.xyz(0,0,w_z_err)):z()
                 local pitch = -180 * (b_z_err * 2 - current_state.vel():z() * 2.8) / (current_state.arspd() * math.pi)
 
                 local yaw = 0.0
@@ -404,8 +438,6 @@ function update()
                 )
 
                 vehicle:set_target_throttle_rate_rpy(thr, roll, pitch, yaw)
-                
-
             else
                 active_turn = t.initialise(id, cmd)
             end

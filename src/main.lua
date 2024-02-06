@@ -1,6 +1,6 @@
 
 local controller = require('controller')
-local g = require('geometry')
+local P = require('geometry/point')
 local State = require('state')
 local t = require('turn')
 
@@ -22,13 +22,12 @@ function update()
             if active_turn then
                 local current_state = State.readCurrent()
 
-                local thr = speed_controller.update(active_turn:arspd(), current_state.arspd())
+                local thr = speed_controller.update(active_turn:arspd(), current_state:arspd())
 
                 local roll = roll_controller.update(active_turn.roll_angle()*180/math.pi, current_state.roll_angle() * 180 / math.pi)
                 
                 local w_z_err = (active_turn.alt() - current_state.pos():z()) / math.cos(current_state.roll_angle())
-                local b_z_err = g.quat_earth_to_body(current_state.att(), g.makeVector3f(0,0,w_z_err)):z()
-               
+                local b_z_err = current_state.att().transform_point(P.xyz(0,0,w_z_err)):z()
                 local pitch = -180 * (b_z_err * 2 - current_state.vel():z() * 2.8) / (current_state.arspd() * math.pi)
 
                 local yaw = 0.0
@@ -39,8 +38,6 @@ function update()
                 )
 
                 vehicle:set_target_throttle_rate_rpy(thr, roll, pitch, yaw)
-                
-
             else
                 active_turn = t.initialise(id, cmd)
             end
