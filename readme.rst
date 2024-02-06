@@ -10,6 +10,17 @@ The project is setup so that it should run in sitl and jsbsim (assuming you have
 https://ardupilot.org/dev/docs/sitl-simulator-software-in-the-loop.html). 
 
 
+The lua scripts are written with modules, which are not supported by ardupilot. The intention is to use a lua
+bundler to put them into single files. https://github.com/Benjamin-Dobell/luabundler
+
+To bundle the lua scripts:
+
+.. code-block:: console
+    
+    luabundler bundle src/script.lua -p "$PWD/src/?.lua" -o scripts/bundle.lua
+
+
+
 To run the simulation:
 
 .. code-block:: console
