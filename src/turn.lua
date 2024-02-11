@@ -1,10 +1,10 @@
 
 local comms = require('comms')
 
-local turn = {}
+local Turn = {}
 
 
-function turn.Turn(id, load_factor, alt, arspd)
+function Turn.new(id, load_factor, alt, arspd)
     local self = {}
     local _id = id
     local _load_factor = load_factor
@@ -12,33 +12,36 @@ function turn.Turn(id, load_factor, alt, arspd)
     local _stage = 0
     local _arspd = arspd
     local _roll_angle = math.acos(1 / _load_factor)
+    local _start_time = millis() / 1000
 
-    function self.arspd()
+    function self:arspd()
         return _arspd
     end
-    function self.id()
+    function self:id()
         return _id
     end
-    function self.load_factor()
+    function self:load_factor()
         return _load_factor
     end
-    function self.alt()
+    function self:alt()
         return _alt
     end
-    function self.stage()
+    function self:stage()
         return _stage
     end
-    function self.stagestring()
+    function self:stagestring()
         return string.format('STG%i',_stage)
     end
-    function self.next_stage()
+    function self:next_stage()
         _stage = _stage + 1
     end
-    function self.roll_angle()
+    function self:roll_angle()
         return _roll_angle
     end
-
-    function self.summary()
+    function self:start_time()
+        return _start_time
+    end
+    function self:summary()
         return string.format("Turn: %i, target g: %f", _id, _load_factor)
     end  
 
@@ -46,15 +49,15 @@ function turn.Turn(id, load_factor, alt, arspd)
 end
 
 
-function turn.initialise(id, cmd)
+function Turn.initialise(id, cmd)
     if cmd == 1 then
-        local new_turn = turn.Turn(id, 2.0, ahrs:get_relative_position_NED_origin():z(), ahrs:airspeed_estimate())
+        local new_turn = Turn.new(id, 2.0, ahrs:get_relative_position_NED_origin():z(), ahrs:airspeed_estimate())
         comms.gcsWrite(new_turn:summary())
         return new_turn
     end
 end
 
-function turn.timout(active_turn)
+function Turn.timout(active_turn)
     if active_turn then
         comms.gcsWrite(string.format("timeout %s",active_turn.summary()))
         return nil
@@ -62,4 +65,4 @@ function turn.timout(active_turn)
 end
 
 
-return turn
+return Turn

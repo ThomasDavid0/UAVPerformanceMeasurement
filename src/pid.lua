@@ -1,8 +1,8 @@
 
-local controller = {}
+local PID = {}
 
 -- constrain a value between limits
-function controller.constrain(v, vmin, vmax)
+function PID.constrain(v, vmin, vmax)
     if v < vmin then
        v = vmin
     end
@@ -14,7 +14,7 @@ function controller.constrain(v, vmin, vmax)
 
 
 
-function controller.PID(name,kP,kI,kD,min,max)
+function PID.new(name,kP,kI,kD,min,max)
    local self = {}
    local _name = name
    local _kP = kP or 0.0
@@ -32,7 +32,7 @@ function controller.PID(name,kP,kI,kD,min,max)
    local _err = nil
    local _total = (_min + _max) / 2
 
-   function self.update(target, current)
+   function self:update(target, current)
       local t = millis():tofloat() * 0.001
       if not _t then
          _t = t
@@ -42,7 +42,7 @@ function controller.PID(name,kP,kI,kD,min,max)
 
       _P = _kP * err
       if ((_total < _max and _total > _min) or (_total >= _max and err < 0) or (_total <= _min and err > 0)) then
-         _I = controller.constrain(_I + _kI * err * dt, _min, _max)
+         _I = PID.constrain(_I + _kI * err * dt, _min, _max)
       end
       if dt > 0 then
          _D = _kD * (err - _err) / dt
@@ -50,7 +50,7 @@ function controller.PID(name,kP,kI,kD,min,max)
       
       _t = t
       _err = err
-      _total = controller.constrain(_P + _I + _D, _min, _max)
+      _total = PID.constrain(_P + _I + _D, _min, _max)
       
       logger.write(
          _name,'Targ,Curr,err,dt,P,I,D,Total','ffffffff',
@@ -60,19 +60,22 @@ function controller.PID(name,kP,kI,kD,min,max)
       return _total
    end
 
-   function self.reset(integrator)
-      _I = integrator
+   function self:reset()
+      _I = (_min + _max) / 2
+      _t=nil
+      _err = nil
+      _total = (_min + _max) / 2
    end
 
-   function self.set_I(I)
+   function self:set_I(I)
       _kI = I
    end
 
-   function self.set_P(P)
+   function self:set_P(P)
       _kP = P
    end
 
-   function self.set_D(D)
+   function self:set_D(D)
       _kD = D
    end
    
@@ -81,4 +84,4 @@ function controller.PID(name,kP,kI,kD,min,max)
    return self
 end
 
-return controller
+return PID

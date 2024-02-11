@@ -6,32 +6,32 @@ function Point.new(p)
     local self = {}
     local _p = p
 
-    function self.x()
+    function self:x()
         return _p:x()
     end
-    function self.y()
+    function self:y()
         return _p:y()
     end
-    function self.z()
+    function self:z()
         return _p:z()
     end
-    function self.copy()
+    function self:copy()
         return Point.xyz(_p:x(), _p:y(), _p:z())
     end
-    function self.p()
+    function self:p()
         return _p
     end
 
-    function self.length()
+    function self:length()
         return _p:length()
     end
 
-    function self.scale(value)
+    function self:scale(value)
         return Point.xyz(_p:x() * value, _p:y() * value, _p:z() * value)
     end
 
-    function self.unit()
-        return Point.new(self.scale(1/self.length()))
+    function self:unit()
+        return Point.new(self:scale(1/self:length()))
     end
 
     return self
@@ -58,8 +58,18 @@ function Point.dot(p1, p2)
 end
 
 function Point.cross(p1, p2)
-    return Point.xyz(p1:y()*p2:z() - p1:z()*p2:y(), p1:z()*p2:x() - p1:x()*p2:z(), p1:x()*p2:y() - p1:y()*p2:x())
+    return Point.new(p1:p():cross(p2:p()))
 end
+function Point.x(v)
+    return Point.xyz(v, 0, 0)
+end
+function Point.y(v)
+    return Point.xyz(0, v, 0)
+end
+function Point.z(v)
+    return Point.xyz(0, 0, v)
+end
+
 
 
 return Point
