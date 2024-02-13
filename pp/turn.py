@@ -39,7 +39,7 @@ flt = fl.slice_time_flight(slice(stt.t[0],stt.t[-1]))
 
 plotsec(stt, nmodels=20, scale=1).show()
 
-plot_controller('tspd', flt.tspd).show()
+#plot_controller('tspd', flt.tspd).show()
 plot_controller('tran', flt.tran).show()
 plot_controller('tral', flt.tral).show()
 plot_controller('tpit', flt.tpit).show()
