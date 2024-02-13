@@ -61,9 +61,22 @@ sts = []
 for i, _st in  st.get_label_subset(stage='para').data.groupby('mode'):
     sts.append(State(_st))
 
+colors = px.colors.qualitative.Plotly
+
 fig = go.Figure()
-for st in sts:
-    fig.add_trace(go.Scatter(y=st.dw))
+for i, _st in enumerate(sts):
+    bx = _st.att.transform_point(g.PX())
+    pitch = np.arcsin(bx.z / abs(bx))
+    fig.add_trace(go.Scatter(x=st.t, y=_st.att.inverse().transform_point(_st.acc).z / 9.81, line=dict(color=colors[i], dash='solid'), name='g force', showlegend=i==0))
+    fig.add_trace(go.Scatter(x=st.t, y=pitch, line=dict(color=colors[i], dash='dash'), yaxis='y2', name='pitch angle', showlegend=i==0))
+    fig.add_trace(go.Scatter(x=st.t, y=abs(_st.vel), line=dict(color=colors[i], dash='dot'), yaxis='y3', name='speed', showlegend=i==0))
+    
+    
+fig.update_layout(
+    yaxis=dict(title='g force'),
+    yaxis2=dict(title='pitch, rad', overlaying='y', anchor='free', autoshift=True),
+    yaxis3=dict(title='speed, m/s', overlaying='y', anchor='free', autoshift=True),
+)
 fig.show()
 
 

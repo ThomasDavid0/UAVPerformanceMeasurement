@@ -60,25 +60,27 @@ function PID.new(name,kP,kI,kD,min,max)
       return _total
    end
 
-   function self:reset()
-      _I = (_min + _max) / 2
+   function self:reset(value)
+      if value == nil then
+         value = (_min + _max) / 2
+      end
+      _I = value
       _t=nil
       _err = nil
-      _total = (_min + _max) / 2
+      _total = value
    end
-
-   function self:set_I(I)
-      _kI = I
+   function self:I()
+      return _I
    end
-
-   function self:set_P(P)
-      _kP = P
+   function self:P()
+      return _P
    end
-
-   function self:set_D(D)
-      _kD = D
+   function self:D()
+      return _D
    end
-   
+   function self:total()
+      return _total
+   end
    
    -- return the instance
    return self

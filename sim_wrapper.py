@@ -10,9 +10,9 @@ while True:
     except Exception:
         pass
 
-sleep(2)
-
+sleep(3)
 vehicle.arm()
+
 vehicle.set_mode(mavlink.PLANE_MODE_AUTO)
 
 

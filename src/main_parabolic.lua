@@ -22,7 +22,6 @@ function update()
                 stage='finshed'
                 vehicle:nav_scripting_enable(255)
                 --vehicle:set_mode(MODE_AUTO)
-                roll_controller:reset()
             else
                 local roll = roll_controller:update(0, math.deg(current_state:roll_angle()))
                 local pitch = 0.0
@@ -47,14 +46,15 @@ function update()
                     thr=20 * id
 --                    pitch = pitch_controller:update(0.0, -math.deg(current_state:acc():z() / current_state:arspd()))
                     local v = current_state:vel():length()
-                    pitch = math.deg(current_state:att():inverse():transform_point(P.z(-9.81)):z() / (v*v) ) 
+                    pitch = math.deg(current_state:att():inverse():transform_point(P.z(-9.81)):z() / v )
                 end
                 
-                logger.write('PINF', 'id,cmd,stage', 'iiN', id, cmd, stage )
+                logger.write('PINF', 'id,cmd,stage,pitch', 'iiNf', id, cmd, stage, pitch )
     
                 vehicle:set_target_throttle_rate_rpy(thr, roll, pitch, 0.0)
             end
         else
+            roll_controller:reset()
             stage='auto'
         end
     end

@@ -69,25 +69,27 @@ files['pid'] = function(...)
           return _total
        end
     
-       function self:reset()
-          _I = (_min + _max) / 2
+       function self:reset(value)
+          if value == nil then
+             value = (_min + _max) / 2
+          end
+          _I = value
           _t=nil
           _err = nil
-          _total = (_min + _max) / 2
+          _total = value
        end
-    
-       function self:set_I(I)
-          _kI = I
+       function self:I()
+          return _I
        end
-    
-       function self:set_P(P)
-          _kP = P
+       function self:P()
+          return _P
        end
-    
-       function self:set_D(D)
-          _kD = D
+       function self:D()
+          return _D
        end
-       
+       function self:total()
+          return _total
+       end
        
        -- return the instance
        return self
@@ -335,7 +337,7 @@ files['state'] = function(...)
             att,
             PID.constrain(ahrs:get_EAS2TAS() * math.max(ahrs:airspeed_estimate(), 3), 3, 100),
             atti:transform_point(P.new(ahrs:get_velocity_NED())),
-            atti:transform_point(P.new(ahrs:get_accel())),
+            P.new(ahrs:get_accel()),
             P.new(ahrs:wind_estimate())
         )
     end
@@ -344,15 +346,110 @@ files['state'] = function(...)
     
     return State
 end
-local PID = require('pid')
-local State = require('state')
-local MODE_AUTO = 10
-local P = require('geometry/point')
-local start_t = millis()
-local stage='prepare' -- auto, prepare, pull, para
+files['comms'] = function(...)
+    
+    
+    local comms = {}
+    
+    function comms.gcsWrite(text)
+        gcs:send_text(6, string.format("LUA: %s", text))
+    end
+    
+    
+    return comms
 
-local roll_controller = PID.new('TRLL', 2.3, 0.2, 0.14, -180, 180)
---local pitch_controller = PID.new('TPIT', 1, 1.6, 0.1, -180, 180)
+end
+files['turn'] = function(...)
+    
+    local comms = require('comms')
+    
+    local Turn = {}
+    
+    
+    function Turn.new(id, load_factor, alt, arspd)
+        local self = {}
+        local _id = id
+        local _load_factor = load_factor
+        local _alt = alt
+        local _stage = 0
+        local _arspd = arspd
+        local _roll_angle = math.acos(1 / _load_factor)
+        local _start_time = millis() / 1000
+    
+    
+        function self:arspd()
+            return _arspd
+        end
+        function self:id()
+            return _id
+        end
+        function self:load_factor()
+            return _load_factor
+        end
+        function self:alt()
+            return _alt
+        end
+        function self:stage()
+            return _stage
+        end
+        function self:stagestring()
+            return string.format('STG%i',_stage)
+        end
+        function self:next_stage()
+            _stage = _stage + 1
+        end
+        function self:roll_angle()
+            return _roll_angle
+        end
+        function self:start_time()
+            return _start_time
+        end
+        function self:summary()
+            return string.format("Turn: %i, target g: %f, roll angle: %f", _id, _load_factor, math.deg(_roll_angle))
+        end  
+    
+        return self
+    end
+    
+    
+    function Turn.initialise(id, cmd)
+        if cmd == 1 then
+            local new_turn = Turn.new(id, 1.1 + 0.2*id, ahrs:get_relative_position_NED_origin():z(), ahrs:airspeed_estimate())
+            comms.gcsWrite(new_turn:summary())
+            return new_turn
+        end
+    end
+    
+    function Turn.timout(active_turn)
+        if active_turn then
+            comms.gcsWrite(string.format("timeout %s",active_turn.summary()))
+            return nil
+        end
+    end
+    
+    
+    return Turn
+end
+
+local PID = require('pid')
+local P = require('geometry/point')
+local State = require('state')
+local Turn = require('turn')
+
+local MODE_AUTO = 10
+
+local turn = nil
+
+local speed_controller = PID.new('TSPD', 13, 10, 0.0, 10, 100)
+local rollalt_controller = PID.new('TRAL', 0.5, 0.6, 0.5, 0, 90) -- control vertical speed with roll angle
+local rollangle_controller = PID.new('TRAN', 0.6, 0.2, 0.2, -90, 90) -- control roll angle with roll rate
+
+
+local pitch_controller = PID.new('TPIT', 4, 2, 4.5, -180, 180)
+local pitch_g_controller = PID.new('TPIG', 3, 10, 1.0, -180, 180)
+local yaw_controller = PID.new('TYAW', 1.5, 2.5, 1.0, -20, 20)
+
+local stagetimer = 0
 
 function update()
 
@@ -361,47 +458,55 @@ function update()
         local id, cmd, arg1, arg2, arg3, arg4 = vehicle:nav_script_time()
         
         if cmd then
-            
-            local current_state = State.readCurrent()
-            
-            if current_state:pos():z() > -50 or math.deg(current_state:pitch_angle()) < -50 then
-                stage='finshed'
-                vehicle:nav_scripting_enable(255)
-                --vehicle:set_mode(MODE_AUTO)
-                roll_controller:reset()
-            else
-                local roll = roll_controller:update(0, math.deg(current_state:roll_angle()))
+            if turn then
+
+                local state = State.readCurrent()
+
+                local thr = speed_controller:update(
+                    turn:arspd(),
+                    state:arspd()
+                )
+                local yaw = yaw_controller:update(0.0, -state:vel():y())
+                local roll = 10.0
                 local pitch = 0.0
-                local thr = 50
-                if stage=='auto' then
-                    start_t=millis()
-                    gcs:send_text(6, string.format('LUA: throttle = %i', 20*id))
-                    stage='prepare'
-                elseif stage=='prepare' then
-                    thr = 100
-                    pitch = 0 -- pitch_controller:update(0.0, -current_state:att():transform_point(current_state:vel()):z())
-                    if millis() - start_t > 3000 then
-                        stage = 'pull'
-                    end
-                elseif stage=='pull' then
-                    thr = 100
-                    pitch = 20
-                    if math.deg(current_state:pitch_angle()) > 30 then
-                        stage = 'para'
-                    end
-                elseif stage=='para' then
-                    thr=20 * id
---                    pitch = pitch_controller:update(0.0, -math.deg(current_state:acc():z() / current_state:arspd()))
-                    local v = current_state:vel():length()
-                    pitch = math.deg(current_state:att():inverse():transform_point(P.z(-9.81)):z() / v) * 1.2
+
+                if turn:stage() == 0 and turn:roll_angle() < state:roll_angle() then
+                    gcs:send_text(6, 'LUA: moving to stage 1')
+                    turn:next_stage()
+                    rollangle_controller:reset(0)
+                    stagetimer = millis() / 1000
+                elseif turn:stage() == 1 and (millis() / 1000 - stagetimer > 1)then
+                    gcs:send_text(6, 'LUA: moving to stage 2')
+                    turn:next_stage()
+                    rollalt_controller:reset(math.deg(state:roll_angle()))
+                    pitch_g_controller:reset(pitch_controller:I())
+                    stagetimer = millis() / 1000
                 end
-                
-                logger.write('PINF', 'id,cmd,stage', 'iiN', id, cmd, stage )
-    
-                vehicle:set_target_throttle_rate_rpy(thr, roll, pitch, 0.0)
+
+                if turn:stage() < 2 then
+                    if turn:stage() == 1 then
+                        roll = rollangle_controller:update(math.deg(turn:roll_angle()), math.deg(state:roll_angle()))
+                    end
+                    local w_z_err = (turn:alt() - state:pos():z()) / math.cos(state:roll_angle())
+                    local pitch_err = state:att():transform_point(P.z(w_z_err)):z() / state:vel():length()
+                    pitch = pitch_controller:update(0.0,  math.deg(pitch_err))
+                elseif turn:stage() == 2 then
+                    pitch = pitch_g_controller:update(turn:load_factor(), -state:acc():z() / 9.81 )
+                    local roll_angle = rollalt_controller:update(0, state:att():transform_point(state:vel()):z())
+                    roll = rollangle_controller:update(roll_angle, math.deg(state:roll_angle()))
+                end
+
+                logger.write('TINF', 'id,cmd,loadfactor,stage', 'iifi', id, cmd, turn:load_factor(), turn:stage())
+
+                vehicle:set_target_throttle_rate_rpy(thr, roll, pitch, yaw)
+                vehicle:set_rudder_offset(0, true)
+
+            else
+                turn = Turn.initialise(id, cmd)
+                gcs:send_text(6, string.format('LUA: %s', turn:summary()))
             end
         else
-            stage='auto'
+            turn = nil
         end
     end
     return update, 1000.0/40

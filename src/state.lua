@@ -64,7 +64,7 @@ function State.readCurrent()
         att,
         PID.constrain(ahrs:get_EAS2TAS() * math.max(ahrs:airspeed_estimate(), 3), 3, 100),
         atti:transform_point(P.new(ahrs:get_velocity_NED())),
-        atti:transform_point(P.new(ahrs:get_accel())),
+        P.new(ahrs:get_accel()),
         P.new(ahrs:wind_estimate())
     )
 end

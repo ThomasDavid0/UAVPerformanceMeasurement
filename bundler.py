@@ -9,7 +9,7 @@ parser = argparse.ArgumentParser(
     description='Bundle LUA Scripts for ArduPilot'
 )
 
-parser.add_argument('-s', '--source', default='src/main.lua')
+parser.add_argument('-s', '--source', default='src/main_parabolic.lua')
 parser.add_argument('-t', '--target', default='sitl/scripts/bundle.lua')
 parser.add_argument('-w', '--workdir', default='src')
 
