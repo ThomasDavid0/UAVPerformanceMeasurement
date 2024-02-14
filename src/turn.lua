@@ -52,7 +52,7 @@ end
 
 function Turn.initialise(id, cmd)
     if cmd == 1 then
-        local new_turn = Turn.new(id, 1.1 + 0.2*id, ahrs:get_relative_position_NED_origin():z(), ahrs:airspeed_estimate())
+        local new_turn = Turn.new(id, 1.0+ 0.2*id, ahrs:get_relative_position_NED_origin():z(), ahrs:airspeed_estimate())
         comms.gcsWrite(new_turn:summary())
         return new_turn
     end

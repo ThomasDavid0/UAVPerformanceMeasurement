@@ -41,7 +41,6 @@ function update()
                 if turn:stage() == 0 and turn:roll_angle() < state:roll_angle() then
                     gcs:send_text(6, 'LUA: moving to stage 1')
                     turn:next_stage()
-                    rollangle_controller:reset(0)
                     stagetimer = millis() / 1000
                 elseif turn:stage() == 1 and (millis() / 1000 - stagetimer > 1)then
                     gcs:send_text(6, 'LUA: moving to stage 2')
@@ -71,6 +70,11 @@ function update()
 
             else
                 turn = Turn.initialise(id, cmd)
+                speed_controller:reset()
+                pitch_controller:reset()
+                rollangle_controller:reset()
+                yaw_controller:reset()
+
                 gcs:send_text(6, string.format('LUA: %s', turn:summary()))
             end
         else

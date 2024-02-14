@@ -29,8 +29,8 @@ st = State.from_flight(fl).label(
     stage=fl.tinf_stage.fillna(99).astype(int).map(lambda x: f'turn_{x}'),
     )
 
-#plot_regions(st, 'turn').show()
-
+plot_regions(st, 'turn').show()
+exit()
 stt = st.get_label_subset(turn='turn_1')
 
 #plot_regions(st, 'stage').show()
