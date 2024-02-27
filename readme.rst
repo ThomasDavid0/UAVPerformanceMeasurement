@@ -17,7 +17,7 @@ To bundle the lua scripts:
 
 .. code-block:: console
     
-    luabundler bundle src/script.lua -p "$PWD/src/?.lua" -o scripts/bundle.lua
+    lua_bundler LUA_SCRIPT sitl/scripts/bundle.lua
 
 
 
@@ -25,19 +25,4 @@ To run the simulation:
 
 .. code-block:: console
 
-    $ sh run_simulation
-
-Then in MavProxy:
-
-.. code-block:: console
-
-    mode auto
-    arm throttle
-
-
-To run on an Aircraft:
-
-set scr_enable to 1 and reboot
-
-Copy the scripts to the scripts directory on the aircraft
-
+    $ sh run_simulation -p MAVLINK_SCRIPT -l LUA_SCRIPT

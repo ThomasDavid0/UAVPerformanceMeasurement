@@ -1,0 +1,27 @@
+local functions = {
+    aileron = 4,
+    elevator = 19,
+    throttle = 70,
+    throttle_left = 73,
+    throttle_right = 74,
+    rudder = 21,
+    flap = 2,
+    automatic_flaps = 3,
+    flaperon_left = 24,
+    flaperon_right = 25,
+    elevon_left = 77,
+    elevon_right = 78,
+    v_tail_left = 79,
+    v_tail_right = 80,
+    differential_spoiler_left1 = 16,
+    differential_spoiler_right1 = 17,
+    differential_spoiler_left2 = 86,
+    differential_spoiler_right2 = 87,
+    ground_steering = 26,
+    boost_engine_throttle = 81,
+    motor_enable_switch = 30,
+    landing_gear = 29,
+    air_brakes = 110,
+
+}
+return functions

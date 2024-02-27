@@ -6,7 +6,7 @@ local require = function(name)
     end
     return loaded_files[name]
 end
-files['pid'] = function(...)
+files['controllers/pid'] = function(...)
     
     local PID = {}
     
@@ -21,8 +21,7 @@ files['pid'] = function(...)
         return v
      end
     
-    
-    
+     
     function PID.new(name,kP,kI,kD,min,max)
        local self = {}
        local _name = name
@@ -274,7 +273,7 @@ files['state'] = function(...)
     
     local P = require('geometry/point')
     local Q = require('geometry/quaternion')
-    local PID = require('pid')
+    local PID = require('controllers/pid')
     
     local State = {}
     
@@ -287,11 +286,14 @@ files['state'] = function(...)
         local _acc = acc
         local _wind = wind
     
+        local _body_wind = _att:transform_point(_wind)
+        local _flow = P.sub(_vel, _body_wind)
         local _hv = _att:transform_point(P.xyz(1,0,0))
         local _yaw = math.atan(_hv:y(), _hv:x())
         local _pitch = -math.atan(_hv:z(), math.sqrt(_hv:x() * _hv:x() + _hv:y() * _hv:y()))
         local _roll_angle = Q.body_axis_rates(Q.euler(P.xyz(0, _pitch, _yaw)), _att):x()
         
+    
         function self:pos()
             return _pos
         end
@@ -316,12 +318,14 @@ files['state'] = function(...)
         function self:pitch_angle()
             return _pitch
         end
-    
+        function self:flow()
+            return _flow
+        end
     
         function self:log(name)
             logger.write(
                 name, 'arspd,roll,pitch,yaw', 'ffff',
-                _arspd, _roll_angle * 180 / math.pi, _pitch * 180/math.pi , _yaw * 180 / math.pi
+                _arspd, _roll_angle * 180 / math.pi, _pitch * 180 / math.pi , _yaw * 180 / math.pi
             )
         end
         
@@ -346,167 +350,116 @@ files['state'] = function(...)
     
     return State
 end
-files['comms'] = function(...)
+files['mappings/functions'] = function(...)
+    local functions = {
+        aileron = 4,
+        elevator = 19,
+        throttle = 70,
+        throttle_left = 73,
+        throttle_right = 74,
+        rudder = 21,
+        flap = 2,
+        automatic_flaps = 3,
+        flaperon_left = 24,
+        flaperon_right = 25,
+        elevon_left = 77,
+        elevon_right = 78,
+        v_tail_left = 79,
+        v_tail_right = 80,
+        differential_spoiler_left1 = 16,
+        differential_spoiler_right1 = 17,
+        differential_spoiler_left2 = 86,
+        differential_spoiler_right2 = 87,
+        ground_steering = 26,
+        boost_engine_throttle = 81,
+        motor_enable_switch = 30,
+        landing_gear = 29,
+        air_brakes = 110,
     
-    
-    local comms = {}
-    
-    function comms.gcsWrite(text)
-        gcs:send_text(6, string.format("LUA: %s", text))
-    end
-    
-    
-    return comms
-
+    }
+    return functions
 end
-files['turn'] = function(...)
+files['mappings/modes'] = function(...)
+    local flightmodes = {
+        MANUAL = 0,
+        CIRCLE = 1,
+        STABILIZE = 2,
+        TRAINING = 3,
+        ACRO = 4,
+        FBWA = 5,
+        FBWB = 6,
+        CRUISE = 7,
+        AUTOTUNE = 8,
+        AUTO = 10,
+        RTL = 11,
+        LOITER = 12,
+        TAKEOFF = 13,
+        AVOID_ADSB = 14,
+        GUIDED = 15,
+        QSTABILIZE = 17,
+        QHOVER = 18,
+        QLOITER = 19,
+        QLAND = 20,
+        QRTL = 21,
+        QAUTOTUNE = 22,
+        QACRO = 23,
+        THERMAL = 24,
+        LOITER_TO_QLAND = 25,
+    }
     
-    local comms = require('comms')
+    return flightmodes
+end
+files['controllers/speed_controller'] = function(...)
+    local PID = require('controllers/pid')
     
-    local Turn = {}
+    local speed_controller = PID.new('TSPD', 100, 50, 0, 0, 100)
     
-    
-    function Turn.new(id, load_factor, alt, arspd)
-        local self = {}
-        local _id = id
-        local _load_factor = load_factor
-        local _alt = alt
-        local _stage = 0
-        local _arspd = arspd
-        local _roll_angle = math.acos(1 / _load_factor)
-        local _start_time = millis() / 1000
-    
-    
-        function self:arspd()
-            return _arspd
-        end
-        function self:id()
-            return _id
-        end
-        function self:load_factor()
-            return _load_factor
-        end
-        function self:alt()
-            return _alt
-        end
-        function self:stage()
-            return _stage
-        end
-        function self:stagestring()
-            return string.format('STG%i',_stage)
-        end
-        function self:next_stage()
-            _stage = _stage + 1
-        end
-        function self:roll_angle()
-            return _roll_angle
-        end
-        function self:start_time()
-            return _start_time
-        end
-        function self:summary()
-            return string.format("Turn: %i, target g: %f, roll angle: %f", _id, _load_factor, math.deg(_roll_angle))
-        end  
-    
-        return self
-    end
-    
-    
-    function Turn.initialise(id, cmd)
-        if cmd == 1 then
-            local new_turn = Turn.new(id, 1.1 + 0.2*id, ahrs:get_relative_position_NED_origin():z(), ahrs:airspeed_estimate())
-            comms.gcsWrite(new_turn:summary())
-            return new_turn
-        end
-    end
-    
-    function Turn.timout(active_turn)
-        if active_turn then
-            comms.gcsWrite(string.format("timeout %s",active_turn.summary()))
-            return nil
-        end
-    end
-    
-    
-    return Turn
+    return speed_controller
 end
 
-local PID = require('pid')
-local P = require('geometry/point')
+local PID = require('controllers/pid')
 local State = require('state')
-local Turn = require('turn')
-
-local MODE_AUTO = 10
-
-local turn = nil
-
-local speed_controller = PID.new('TSPD', 13, 10, 0.0, 10, 100)
-local rollalt_controller = PID.new('TRAL', 0.5, 0.6, 0.5, 0, 90) -- control vertical speed with roll angle
-local rollangle_controller = PID.new('TRAN', 0.6, 0.2, 0.2, -90, 90) -- control roll angle with roll rate
+local functions = require('mappings/functions')
+local flightmodes = require('mappings/modes')
 
 
-local pitch_controller = PID.new('TPIT', 4, 2, 4.5, -180, 180)
-local pitch_g_controller = PID.new('TPIG', 3, 10, 1.0, -180, 180)
-local yaw_controller = PID.new('TYAW', 1.5, 2.5, 1.0, -20, 20)
+local speed_controller = require('controllers/speed_controller')
+-- PID.new('TSPD', 15, 15, 0, 0, 100)
 
-local stagetimer = 0
+local started = millis()
+local s0 = nil
+local step_size = 5
 
 function update()
 
-    if vehicle:get_mode() == MODE_AUTO and arming:is_armed() then
+    if vehicle:get_mode() == flightmodes.AUTO and arming:is_armed() then
         
         local id, cmd, arg1, arg2, arg3, arg4 = vehicle:nav_script_time()
         
+        local state = State.readCurrent()
+
         if cmd then
-            if turn then
-
-                local state = State.readCurrent()
-
-                local thr = speed_controller:update(
-                    turn:arspd(),
-                    state:arspd()
-                )
-                local yaw = yaw_controller:update(0.0, -state:vel():y())
-                local roll = 10.0
-                local pitch = 0.0
-
-                if turn:stage() == 0 and turn:roll_angle() < state:roll_angle() then
-                    gcs:send_text(6, 'LUA: moving to stage 1')
-                    turn:next_stage()
-                    rollangle_controller:reset(0)
-                    stagetimer = millis() / 1000
-                elseif turn:stage() == 1 and (millis() / 1000 - stagetimer > 1)then
-                    gcs:send_text(6, 'LUA: moving to stage 2')
-                    turn:next_stage()
-                    rollalt_controller:reset(math.deg(state:roll_angle()))
-                    pitch_g_controller:reset(pitch_controller:I())
-                    stagetimer = millis() / 1000
-                end
-
-                if turn:stage() < 2 then
-                    if turn:stage() == 1 then
-                        roll = rollangle_controller:update(math.deg(turn:roll_angle()), math.deg(state:roll_angle()))
-                    end
-                    local w_z_err = (turn:alt() - state:pos():z()) / math.cos(state:roll_angle())
-                    local pitch_err = state:att():transform_point(P.z(w_z_err)):z() / state:vel():length()
-                    pitch = pitch_controller:update(0.0,  math.deg(pitch_err))
-                elseif turn:stage() == 2 then
-                    pitch = pitch_g_controller:update(turn:load_factor(), -state:acc():z() / 9.81 )
-                    local roll_angle = rollalt_controller:update(0, state:att():transform_point(state:vel()):z())
-                    roll = rollangle_controller:update(roll_angle, math.deg(state:roll_angle()))
-                end
-
-                logger.write('TINF', 'id,cmd,loadfactor,stage', 'iifi', id, cmd, turn:load_factor(), turn:stage())
-
-                vehicle:set_target_throttle_rate_rpy(thr, roll, pitch, yaw)
-                vehicle:set_rudder_offset(0, true)
-
-            else
-                turn = Turn.initialise(id, cmd)
-                gcs:send_text(6, string.format('LUA: %s', turn:summary()))
+            local target_speed = s0
+            if millis() - started > 10000 then
+                target_speed = s0 + step_size
+                started = millis()
+                step_size = -step_size
+                s0 = target_speed
             end
+
+            local thr = speed_controller:update(
+                target_speed,
+                state:flow():length()
+            )
+
+            vehicle:set_target_throttle_rate_rpy(thr, 0, 0, 0)
+            vehicle:set_rudder_offset(0, true)
+
         else
-            turn = nil
+            started = millis()
+            s0 = state:flow():length()
+            --gcs:send_text(6, string.format("throttle = %i", SRV_Channels:get_output_scaled(functions.throttle)))
+            speed_controller:reset(SRV_Channels:get_output_scaled(functions.throttle))
         end
     end
     return update, 1000.0/40
