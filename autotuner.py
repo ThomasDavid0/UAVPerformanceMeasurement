@@ -25,6 +25,7 @@ for channel in [0, 1, 3]:
     vehicle.set_mode(mavlink.PLANE_MODE_GUIDED)
     vehicle.nav_waypoint(1, home.offset(g.PZ(-100)))
     mi = vehicle.next_MissionItemReached(None)
+    # check messages MAV_CMD_SCRIPTING, MAV_CMD_NAV_SCRIPT_TIME, PID_TUNING
 
     logger.info(f'Autotune channel {channel}')
     vehicle.set_mode(mavlink.PLANE_MODE_AUTOTUNE)

@@ -26,3 +26,15 @@ To run the simulation:
 .. code-block:: console
 
     $ sh run_simulation -p MAVLINK_SCRIPT -l LUA_SCRIPT
+
+
+Adding Mavlink Message
+----------------------
+
+- add to XML Definition in mavlink
+- build plane
+- edit libraries/GCS_MAVLink/ap_message.h 
+- link ID in libraries/GCS_MAVLink/GCS_Common.cpp mavlink_id_to_ap_message_id
+- add function to create the message libraries/GCS_MAVLink/GCS.h 
+-  call function in GCS_MAVLINK::try_send_message /libraries/GCS_MAVLink/GCS_Common.cpp
+

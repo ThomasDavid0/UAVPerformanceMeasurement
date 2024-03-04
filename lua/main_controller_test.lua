@@ -1,5 +1,4 @@
 
-local PID = require('controllers/pid')
 local State = require('state')
 local functions = require('mappings/functions')
 local flightmodes = require('mappings/modes')
@@ -30,6 +29,7 @@ function update()
             end
 
             local thr = speed_controller:update(
+                0.0,
                 target_speed,
                 state:flow():length()
             )

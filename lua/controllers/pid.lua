@@ -10,12 +10,14 @@ function PID.constrain(v, vmin, vmax)
        v = vmax
     end
     return v
- end
+end
 
  
-function PID.new(name,kP,kI,kD,min,max)
+function PID.new(name, kFF, kP,kI,kD,min,max)
    local self = {}
    local _name = name
+
+   local _kFF = kFF or 0.0
    local _kP = kP or 0.0
    local _kI = kI or 0.0
    local _kD = kD or 0.0
@@ -23,6 +25,7 @@ function PID.new(name,kP,kI,kD,min,max)
    local _min = min
    local _max = max
    
+   local _FF = 0
    local _P = 0
    local _I = (_min + _max) / 2
    local _D = 0
@@ -31,14 +34,15 @@ function PID.new(name,kP,kI,kD,min,max)
    local _err = nil
    local _total = (_min + _max) / 2
 
-   function self:update(target, current)
+   function self:update(ff, target, current)
       local t = millis():tofloat() * 0.001
       if not _t then
          _t = t
       end
       local err = target - current
       local dt = t - _t
-
+      
+      _FF = _kFF * ff
       _P = _kP * err
       if ((_total < _max and _total > _min) or (_total >= _max and err < 0) or (_total <= _min and err > 0)) then
          _I = PID.constrain(_I + _kI * err * dt, _min, _max)
@@ -49,12 +53,14 @@ function PID.new(name,kP,kI,kD,min,max)
       
       _t = t
       _err = err
-      _total = PID.constrain(_P + _I + _D, _min, _max)
+      _total = PID.constrain(_FF + _P + _I + _D, _min, _max)
       
       logger.write(
-         _name,'Targ,Curr,err,dt,P,I,D,Total','ffffffff',
-         target,current,err,dt,_P,_I,_D,_total
+         _name,'ff,Targ,Curr,err,dt,FF,P,I,D,Total','ffffffffff',
+         ff,target,current,err,dt,_FF, _P,_I,_D,_total
       )
+
+      gcs:send_custom_pid_state(_name, current, target, dt, _FF, _P,_I,_D)
 
       return _total
    end

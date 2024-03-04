@@ -2385,6 +2385,18 @@ gcs = {}
 ---@param value number -- value to send
 function gcs:send_named_float(name, value) end
 
+
+-- send the state of a custom PID controller
+---@param name string -- up to 10 chars long
+---@param input number -- input value
+---@param target number -- target value
+---@param dt number -- timestep
+---@param FF number -- feed forward
+---@param P number -- proportional value
+---@param I number -- integral value
+---@param D number -- defrivative value
+function gcs:send_custom_pid_state(name, input, target, dt, FF, P, I, D) end
+
 -- set message interval for a given serial port and message id
 ---@param port_num integer -- serial port number
 ---@param msg_id uint32_t_ud -- MAVLink message id
