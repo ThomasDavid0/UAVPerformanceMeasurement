@@ -198,6 +198,7 @@ files['controllers/pid'] = function(...)
     function PID.new(name, kFF, kP,kI,kD,min,max)
        local self = {}
        local _name = name
+    
        local _kFF = kFF or 0.0
        local _kP = kP or 0.0
        local _kI = kI or 0.0
@@ -414,10 +415,51 @@ files['mappings/modes'] = function(...)
     
     return flightmodes
 end
+files['param_table'] = function(...)
+    
+    
+    local PT = {}
+    
+    
+    function PT:new(key, prefix, l)
+      local self = {}
+      local _key = key
+      local _prefix = prefix
+      local _l = l
+      local _count = 0
+      assert(param:add_table(_key, _prefix, _l), 'could not add param table')
+    
+      function self:param(name, default_value)
+          assert(
+            param:add_param(_key, _count + 1, name, default_value),
+            string.format('could not add param %s', name)
+          )
+          _count = _count + 1
+          return Parameter(_prefix .. name)
+      end
+      return self
+    end
+    
+    
+    return PT
+    
+
+end
 files['controllers/speed_controller'] = function(...)
     local PID = require('controllers/pid')
+    local PT = require('param_table')
     
-    local speed_controller = PID.new('TSPD', 1, 60, 50, 0, 0, 100)
+    local pt = PT:new(71, "SCRTSPD_", 6)
+    
+    local speed_controller = PID.new(
+        'TSPD',
+        pt:param('kFF', 1):get(),
+        pt:param('kP', 60):get(),
+        pt:param('kI', 50):get(),
+        pt:param('kD', 0):get(),
+        pt:param('min', 0):get(),
+        pt:param('max', 100):get()
+    )
     
     return speed_controller
 end
@@ -428,7 +470,6 @@ local flightmodes = require('mappings/modes')
 
 
 local speed_controller = require('controllers/speed_controller')
--- PID.new('TSPD', 15, 15, 0, 0, 100)
 
 local started = millis()
 local s0 = nil
@@ -461,6 +502,7 @@ function update()
             vehicle:set_rudder_offset(0, true)
 
         else
+            step_size = 5
             started = millis()
             s0 = state:flow():length()
             --gcs:send_text(6, string.format("throttle = %i", SRV_Channels:get_output_scaled(functions.throttle)))

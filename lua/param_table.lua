@@ -17,17 +17,11 @@ function PT:new(key, prefix, l)
         string.format('could not add param %s', name)
       )
       _count = _count + 1
-      return Parameter(_prefix .. name):get()
+      return Parameter(_prefix .. name)
   end
   return self
 end
 
 
---[[
-  // @Param: AEROM_ANG_ACCEL
-  // @DisplayName: Angular acceleration limit
-  // @Description: Maximum angular acceleration in maneuvers
-  // @Units: deg/s/s
---]]
---AEROM_ANG_ACCEL = bind_add_param('ANG_ACCEL', 1, 6000)
+return PT
 

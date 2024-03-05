@@ -5,7 +5,6 @@ local flightmodes = require('mappings/modes')
 
 
 local speed_controller = require('controllers/speed_controller')
--- PID.new('TSPD', 15, 15, 0, 0, 100)
 
 local started = millis()
 local s0 = nil
@@ -38,6 +37,7 @@ function update()
             vehicle:set_rudder_offset(0, true)
 
         else
+            step_size = 5
             started = millis()
             s0 = state:flow():length()
             --gcs:send_text(6, string.format("throttle = %i", SRV_Channels:get_output_scaled(functions.throttle)))
