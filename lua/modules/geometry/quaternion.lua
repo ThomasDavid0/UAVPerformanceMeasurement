@@ -1,5 +1,5 @@
 
-local Point = require('geometry/point')
+local Point = require('modules/geometry/point')
 
 local Quat = {}
 

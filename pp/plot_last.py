@@ -11,13 +11,13 @@ fl = Flight.from_log(get_last_log(),
     TSPD = make_controller_field('tspd'),
 )
 
-labels = np.full(len(fl), 'auto')
-labels[pd.isna(fl.data.tspd_Targ)] = 'controller'
+#labels = np.full(len(fl), 'auto')
+#labels[pd.isna(fl.data.tspd_Targ)] = 'controller'
 
 
-st = State.from_flight(fl).label(controller=labels)
+st = State.from_flight(fl)#.label(controller=labels)
 
-plot_regions(st, 'controller').show()
+plotsec(st, scale=3, nmodels=20).show()
 
-plot_controller('tspd', fl.tspd).show()
+#plot_controller('tspd', fl.tspd).show()
 

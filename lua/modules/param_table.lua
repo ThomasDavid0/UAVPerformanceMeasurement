@@ -3,7 +3,8 @@
 local PT = {}
 
 
-function PT:new(key, prefix, l)
+
+function PT.new(key, prefix, l)
   local self = {}
   local _key = key
   local _prefix = prefix
@@ -20,6 +21,15 @@ function PT:new(key, prefix, l)
       return Parameter(_prefix .. name)
   end
   return self
+end
+
+
+function PT.get_value(p_or_v)
+  if type(p_or_v) == 'number' then
+    return p_or_v
+  else
+    return p_or_v:get()
+  end
 end
 
 

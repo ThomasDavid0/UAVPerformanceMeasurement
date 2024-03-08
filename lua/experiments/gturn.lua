@@ -1,8 +1,8 @@
 
-local PID = require('controllers/pid')
-local P = require('geometry/point')
-local State = require('state')
-local Turn = require('turn')
+local PID = require('modules/controllers/pid')
+local P = require('modules/geometry/point')
+local State = require('modules/state')
+local Turn = require('modules/turn')
 
 local MODE_AUTO = 10
 
@@ -38,7 +38,6 @@ function update()
                 local yaw = yaw_controller:update(0.0, -state:vel():y())
                 local roll = 10.0
                 local pitch = 0.0
-                
                 
                 if load_factor < turn:load_factor() then
                     load_factor = math.min(load_factor + 0.01, turn:load_factor())

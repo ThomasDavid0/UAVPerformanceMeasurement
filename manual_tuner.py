@@ -9,19 +9,15 @@ vehicle.set_mode(mavlink.PLANE_MODE_AUTO)
 
 vehicle.get_custompidstate(None)
 
-def read_data():
-    while True:
-        msg = vehicle.next_custompidstate(0.5)
-        if msg.name == 'TSPD':
-            return msg.data
-
-watcher = Watcher(read_data, 5000, None)
+watcher = Watcher(lambda : vehicle.next_custompidstate(0.5), 5000, None)
 
 def get_data():
     if min(len(watcher.data), len(watcher.times)) > 0:
         if watcher.last_result_age() > 0.5:
             watcher.reset()
-    return watcher.dataframe(columns=['controller', 'input', 'target', 'dt', 'FF', 'P', 'I', 'D'])
+    df = watcher.dataframe(columns=['controller', 'input', 'target', 'dt', 'FF', 'P', 'I', 'D'])
+    return df.loc[df.controller=='TPAN']
+
 
 lm.create_live_plot(
     source = get_data,

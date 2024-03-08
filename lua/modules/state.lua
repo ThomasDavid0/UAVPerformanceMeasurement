@@ -1,7 +1,7 @@
 
-local P = require('geometry/point')
-local Q = require('geometry/quaternion')
-local PID = require('controllers/pid')
+local P = require('modules/geometry/point')
+local Q = require('modules/geometry/quaternion')
+local PID = require('modules/controllers/pid')
 
 local State = {}
 

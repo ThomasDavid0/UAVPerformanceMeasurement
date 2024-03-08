@@ -1,7 +1,8 @@
-local PID = require('controllers/pid')
-local State = require('state')
+local PID = require('modules/controllers/pid')
+local State = require('modules/state')
+local P = require('modules/geometry/point')
 local MODE_AUTO = 10
-local P = require('geometry/point')
+
 local start_t = millis()
 local stage='prepare' -- auto, prepare, pull, para
 

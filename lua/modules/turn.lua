@@ -1,5 +1,4 @@
 
-local comms = require('comms')
 
 local Turn = {}
 
@@ -53,14 +52,14 @@ end
 function Turn.initialise(id, cmd, g, arspd)
     if cmd == 1 then
         local new_turn = Turn.new(id, g, ahrs:get_relative_position_NED_origin():z(), arspd)
-        comms.gcsWrite(new_turn:summary())
+        gcs:send_text(6, new_turn:summary())
         return new_turn
     end
 end
 
 function Turn.timout(active_turn)
     if active_turn then
-        comms.gcsWrite(string.format("timeout %s",active_turn.summary()))
+        gcs:send_text(6, string.format("timeout %s",active_turn.summary()))
         return nil
     end
 end
