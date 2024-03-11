@@ -36,6 +36,46 @@ files['modules/mappings/modes'] = function(...)
     
     return flightmodes
 end
+files['modules/param_table'] = function(...)
+    
+    
+    local PT = {}
+    
+    
+    
+    function PT.new(key, prefix, l)
+      local self = {}
+      local _key = key
+      local _prefix = prefix
+      local _l = l
+      local _count = 0
+      assert(param:add_table(_key, _prefix, _l), 'could not add param table')
+    
+      function self:param(name, default_value)
+          assert(
+            param:add_param(_key, _count + 1, name, default_value),
+            string.format('could not add param %s', name)
+          )
+          _count = _count + 1
+          return Parameter(_prefix .. name)
+      end
+      return self
+    end
+    
+    
+    function PT.get_value(p_or_v)
+      if type(p_or_v) == 'number' then
+        return p_or_v
+      else
+        return p_or_v:get()
+      end
+    end
+    
+    
+    return PT
+    
+
+end
 files['modules/geometry/point'] = function(...)
     
     
@@ -208,46 +248,6 @@ files['modules/geometry/quaternion'] = function(...)
     end
     
     return Quat
-end
-files['modules/param_table'] = function(...)
-    
-    
-    local PT = {}
-    
-    
-    
-    function PT.new(key, prefix, l)
-      local self = {}
-      local _key = key
-      local _prefix = prefix
-      local _l = l
-      local _count = 0
-      assert(param:add_table(_key, _prefix, _l), 'could not add param table')
-    
-      function self:param(name, default_value)
-          assert(
-            param:add_param(_key, _count + 1, name, default_value),
-            string.format('could not add param %s', name)
-          )
-          _count = _count + 1
-          return Parameter(_prefix .. name)
-      end
-      return self
-    end
-    
-    
-    function PT.get_value(p_or_v)
-      if type(p_or_v) == 'number' then
-        return p_or_v
-      else
-        return p_or_v:get()
-      end
-    end
-    
-    
-    return PT
-    
-
 end
 files['modules/controllers/pid'] = function(...)
     local PT = require('modules/param_table')
@@ -517,24 +517,22 @@ files['experiments/pitch_angle_controller_tuning'] = function(...)
     local State = require('modules/state')
     local functions = require('modules/mappings/functions')
     local SQ = require('modules/square_wave')
-    local pitch_controller = require('modules/controllers/pitch_angle_controller')
     
+    local pitch_controller = require('modules/controllers/pitch_angle_controller')
     local sq = SQ.new(2, 5000, 5)
     
     local Exp = {}
-    
     function Exp.setup()
         local self = {}
         local state = State.readCurrent()
     
         function self:run()
-    
             vehicle:set_target_throttle_rate_rpy(
-                    SRV_Channels:get_output_scaled(functions.throttle),
-                    0, 
-                    pitch_controller:update(0.0, sq:value(), math.deg(state:pitch_angle())),
-                    0
-                )
+                SRV_Channels:get_output_scaled(functions.throttle),
+                0,
+                pitch_controller:update(0.0, sq:value(), math.deg(state:pitch_angle())),
+                0
+            )
             vehicle:set_rudder_offset(0, true)
         end
     
@@ -594,22 +592,19 @@ files['experiments/alt_controller_tuning'] = function(...)
     local SQ = require('modules/square_wave')
     
     local alt_controller = require('modules/controllers/alt_controller')
-    
     local sq = SQ.new(100, 10000, 5)
-    local PCCT = {}
     
-    function PCCT.setup()
+    local Exp = {}
+    function Exp.setup()
         local self = {}
         local state = State.readCurrent()
     
         function self:run()
-            local target = sq:value()
-    
-            local pitch = alt_controller:update(0.0, target, -state:pos():z(), math.deg(state:pitch_angle()))
-    
             vehicle:set_target_throttle_rate_rpy(
                 SRV_Channels:get_output_scaled(functions.throttle),
-                0, pitch, 0
+                0,
+                alt_controller:update(0.0, sq:value(), -state:pos():z(), math.deg(state:pitch_angle())),
+                0
             )
             vehicle:set_rudder_offset(0, true)
         end
@@ -622,67 +617,7 @@ files['experiments/alt_controller_tuning'] = function(...)
         return self
     end
     
-    
-    
-    return PCCT
-end
-files['modules/controllers/speed_controller'] = function(...)
-    local PID = require('modules/controllers/pid')
-    local PT = require('modules/param_table')
-    
-    local pt = PT.new(71, "SCRTSPD_", 6)
-    
-    local kFF = pt:param('kFF', 1)
-    local kP = pt:param('kP', 60)
-    local kI = pt:param('kI', 50)
-    local kD = pt:param('kD', 0)
-    local min = pt:param('min', 0)
-    local max = pt:param('max', 100)
-    
-    
-    local speed_controller = PID.new('TSPD', kFF, kP, kI, kD, min, max)
-    
-    return speed_controller
-end
-files['experiments/speed_controller_tuning'] = function(...)
-    
-    local State = require('modules/state')
-    local functions = require('modules/mappings/functions')
-    local SQ = require('modules/square_wave')
-    local speed_controller = require('modules/controllers/speed_controller')
-    local alt_controller = require('modules/controllers/alt_controller')
-    
-    local sq = SQ.new(24, 10000, 4)
-    
-    local SCT = {}
-    function SCT.setup()
-        local self = {}
-        local state = State.readCurrent()
-    
-        function self:run()
-            
-            local pitch = alt_controller:update(0.0, 100, -state:pos():z(), math.deg(state:pitch_angle()))
-    
-            local target = sq:value()
-            local thr = speed_controller:update(0.0, target, state:flow():length())
-    
-            vehicle:set_target_throttle_rate_rpy(thr, 0, pitch, 0)
-            vehicle:set_rudder_offset(0, true)
-        end
-    
-        function self:reset()
-            sq:reset()
-            speed_controller:reset(SRV_Channels:get_output_scaled(functions.throttle))
-            alt_controller:reset()
-        end
-    
-        return self
-    end
-    
-    return SCT
-    
-    
-
+    return Exp
 end
 files['modules/controllers/roll_angle_controller'] = function(...)
     local PID = require('modules/controllers/pid')
@@ -702,31 +637,47 @@ files['modules/controllers/roll_angle_controller'] = function(...)
     
     return controller
 end
+files['modules/controllers/speed_controller'] = function(...)
+    local PID = require('modules/controllers/pid')
+    local PT = require('modules/param_table')
+    
+    local pt = PT.new(71, "SCRTSPD_", 6)
+    
+    local kFF = pt:param('kFF', 1)
+    local kP = pt:param('kP', 60)
+    local kI = pt:param('kI', 50)
+    local kD = pt:param('kD', 0)
+    local min = pt:param('min', 0)
+    local max = pt:param('max', 100)
+    
+    
+    local speed_controller = PID.new('TSPD', kFF, kP, kI, kD, min, max)
+    
+    return speed_controller
+end
 files['experiments/roll_angle_controller_tuning'] = function(...)
     
     local State = require('modules/state')
     local functions = require('modules/mappings/functions')
     local SQ = require('modules/square_wave')
+    
     local roll_controller = require('modules/controllers/roll_angle_controller')
     local speed_controller = require('modules/controllers/speed_controller')
     local alt_controller = require('modules/controllers/alt_controller')
-    
-    
     local sq = SQ.new(0, 5000, 10)
-    local RCCT = {}
     
-    function RCCT.setup()
+    local Exp = {}
+    function Exp.setup()
         local self = {}
         local state = State.readCurrent()
     
         function self:run()
-            local target = sq:value()
-    
-            local roll = roll_controller:update(0.0,target, math.deg(state:roll_angle()))
-            local pitch = alt_controller:update(0.0, 100, -state:pos():z(), math.deg(state:pitch_angle()))
-            local thr = speed_controller:update(0.0, 22, state:flow():length())
-    
-            vehicle:set_target_throttle_rate_rpy(thr, roll, pitch, 0)
+            vehicle:set_target_throttle_rate_rpy(
+                speed_controller:update(0.0, 22, state:flow():length()),
+                roll_controller:update(0.0, sq:value(), math.deg(state:roll_angle())),
+                alt_controller:update(0.0, 100, -state:pos():z(), math.deg(state:pitch_angle())),
+                0
+            )
             vehicle:set_rudder_offset(0, true)
         end
     
@@ -742,21 +693,68 @@ files['experiments/roll_angle_controller_tuning'] = function(...)
     
     
     
-    return RCCT
+    return Exp
+end
+files['experiments/speed_controller_tuning'] = function(...)
+    
+    local State = require('modules/state')
+    local functions = require('modules/mappings/functions')
+    local SQ = require('modules/square_wave')
+    
+    local roll_controller = require('modules/controllers/roll_angle_controller')
+    local speed_controller = require('modules/controllers/speed_controller')
+    local alt_controller = require('modules/controllers/alt_controller')
+    local sq = SQ.new(24, 10000, 4)
+    
+    local Exp = {}
+    function Exp.setup()
+        local self = {}
+        local state = State.readCurrent()
+    
+        function self:run()
+            vehicle:set_target_throttle_rate_rpy(
+                speed_controller:update(0.0, sq:value(), state:flow():length()),
+                roll_controller:update(0.0, 0, math.deg(state:roll_angle())),
+                alt_controller:update(0.0, 100, -state:pos():z(), math.deg(state:pitch_angle())),
+                0
+            )
+            vehicle:set_rudder_offset(0, true)
+        end
+    
+        function self:reset()
+            sq:reset()
+            speed_controller:reset(SRV_Channels:get_output_scaled(functions.throttle))
+            alt_controller:reset()
+            roll_controller:reset()
+        end
+    
+        return self
+    end
+    
+    return Exp
+    
+    
+
 end
 local flightmodes = require('modules/mappings/modes')
+local PT = require('modules/param_table')
 
 local experiments = {}
 experiments[0] = require('experiments/pitch_angle_controller_tuning')
 experiments[1] = require('experiments/alt_controller_tuning')
-experiments[2] = require('experiments/speed_controller_tuning')
-experiments[3] = require('experiments/roll_angle_controller_tuning')
+experiments[2] = require('experiments/roll_angle_controller_tuning')
+experiments[3] = require('experiments/speed_controller_tuning')
+
+
+local pt = PT.new(69, "SCRTEXP_", 6)
+
+local expid = pt:param('EXPID', 0)
 
 function update()
     if vehicle:get_mode() == flightmodes.AUTO and arming:is_armed() then
         local id, cmd, arg1, arg2, arg3, arg4 = vehicle:nav_script_time()
 
-        local exp = experiments[0].setup()
+        local exp = experiments[expid:get()].setup()
 
         if cmd then
             exp:run()
@@ -771,5 +769,3 @@ end
 
 
 return update()
-
-

@@ -16,7 +16,7 @@ function Exp.setup()
     function self:run()
         vehicle:set_target_throttle_rate_rpy(
             speed_controller:update(0.0, sq:value(), state:flow():length()),
-            roll_controller:update(0.0, sq:value(), math.deg(state:roll_angle())),
+            roll_controller:update(0.0, 0, math.deg(state:roll_angle())),
             alt_controller:update(0.0, 100, -state:pos():z(), math.deg(state:pitch_angle())),
             0
         )

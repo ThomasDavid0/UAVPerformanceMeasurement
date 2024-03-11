@@ -1,4 +1,4 @@
-
+#!/home/td6834/mambaforge/envs/dint/bin/python
 from matplotlib import use as use_agg
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
@@ -16,12 +16,12 @@ print(msg.data)
 
 watcher = Watcher(lambda : vehicle.next_custompidstate(0.5).data, 5000, None)
 
-def get_data():
+def get_data(controller):
     if min(len(watcher.data), len(watcher.times)) > 0:
         if watcher.last_result_age() > 0.5:
             watcher.reset()
     df = watcher.dataframe(columns=['controller', 'input', 'target', 'dt', 'FF', 'P', 'I', 'D'])
-    return df.loc[df.controller=='TPAN']
+    return df.loc[df.controller==controller]
 
 def pack_figure(graph, figure):
     canvas = FigureCanvasTkAgg(figure, graph.Widget)
@@ -31,9 +31,19 @@ def pack_figure(graph, figure):
 
 use_agg('TkAgg')
 
+cont = 'TPAN'
 layout = [
     [sg.Graph((640, 480), (0, 0), (640, 480), key='Graph1')],
-    [sg.Button('Ok'), sg.Button('Cancel')] 
+    [
+        sg.Combo(
+            ['TPAN', 'TPAL', 'TRAN', 'TSPD'], 
+            readonly=True, 
+            enable_events=True, 
+            key='controller', 
+            default_value=cont
+        ), 
+        sg.Button('Exit')
+    ] 
 ]
 
 window = sg.Window('Matplotlib', layout, finalize=True)
@@ -56,17 +66,19 @@ tri = [
 ]
 axs = lm.create_axes(fig1, axi)
 pack_figure(graph1, fig1)
-lines = lm.create_traces(axs, tri, get_data())
+
+
+lines = lm.create_traces(axs, tri, get_data('TPAN'))
 fig1.canvas.draw()
 
 while True:
     event, values = window.read(timeout=100)
-    if event == sg.WIN_CLOSED or event == 'Cancel':
+    if event == sg.WIN_CLOSED or event == 'Exit':
         break
     elif event == sg.TIMEOUT_EVENT:
-        data = get_data()
+        data = get_data(values['controller'])
         if len(data) > 0:
-            lm.update_traces(lines, axs, axi, tri, get_data())
+            lm.update_traces(lines, axs, axi, tri, data)
             fig1.canvas.draw()
 
 window.close()
