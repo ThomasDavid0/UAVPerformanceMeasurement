@@ -302,7 +302,7 @@ files['modules/controllers/pid'] = function(...)
     
        local _t = nil
        local _err = nil
-       local _total = (self:min() + self:max()) / 2
+       local _total = _I
     
        function self:update(ff, target, current)
           local t = millis():tofloat() * 0.001
@@ -512,7 +512,7 @@ files['modules/controllers/pitch_angle_controller'] = function(...)
     
     return controller
 end
-files['experiments/pitch_angle_controller_tuning'] = function(...)
+files['experiments/exp0_pitch_angle_controller_tuning'] = function(...)
     
     local State = require('modules/state')
     local functions = require('modules/mappings/functions')
@@ -522,7 +522,7 @@ files['experiments/pitch_angle_controller_tuning'] = function(...)
     local sq = SQ.new(2, 5000, 5)
     
     local Exp = {}
-    function Exp.setup()
+    function Exp.setup(id, cmd)
         local self = {}
         local state = State.readCurrent()
     
@@ -571,10 +571,11 @@ files['modules/controllers/alt_controller'] = function(...)
     local cnt = {}
     
     
-    function cnt:update(ff, target_alt, current_alt, current_pitch)
+    function cnt:update(target_alt, current_alt, current_roll, current_pitch)
+        local ff = -1 / math.cos(math.rad(current_roll))
         local pitch_target = pa_alt_controller:update(ff, target_alt, current_alt)
     
-        return pitch_controller:update(0, pitch_target, current_pitch)
+        return pitch_controller:update(0, pitch_target, math.deg(current_pitch))
     end
     
     function cnt:reset()
@@ -585,7 +586,7 @@ files['modules/controllers/alt_controller'] = function(...)
     
     return cnt
 end
-files['experiments/alt_controller_tuning'] = function(...)
+files['experiments/exp1_alt_controller_tuning'] = function(...)
     
     local State = require('modules/state')
     local functions = require('modules/mappings/functions')
@@ -595,7 +596,7 @@ files['experiments/alt_controller_tuning'] = function(...)
     local sq = SQ.new(100, 10000, 5)
     
     local Exp = {}
-    function Exp.setup()
+    function Exp.setup(id, cmd)
         local self = {}
         local state = State.readCurrent()
     
@@ -603,7 +604,12 @@ files['experiments/alt_controller_tuning'] = function(...)
             vehicle:set_target_throttle_rate_rpy(
                 SRV_Channels:get_output_scaled(functions.throttle),
                 0,
-                alt_controller:update(0.0, sq:value(), -state:pos():z(), math.deg(state:pitch_angle())),
+                alt_controller:update(
+                    sq:value(),
+                    -state:pos():z(),
+                    state:roll_angle(),
+                    state:pitch_angle()
+                ),
                 0
             )
             vehicle:set_rudder_offset(0, true)
@@ -655,7 +661,7 @@ files['modules/controllers/speed_controller'] = function(...)
     
     return speed_controller
 end
-files['experiments/roll_angle_controller_tuning'] = function(...)
+files['experiments/exp2_roll_angle_controller_tuning'] = function(...)
     
     local State = require('modules/state')
     local functions = require('modules/mappings/functions')
@@ -667,7 +673,7 @@ files['experiments/roll_angle_controller_tuning'] = function(...)
     local sq = SQ.new(0, 5000, 10)
     
     local Exp = {}
-    function Exp.setup()
+    function Exp.setup(id, cmd)
         local self = {}
         local state = State.readCurrent()
     
@@ -675,7 +681,12 @@ files['experiments/roll_angle_controller_tuning'] = function(...)
             vehicle:set_target_throttle_rate_rpy(
                 speed_controller:update(0.0, 22, state:flow():length()),
                 roll_controller:update(0.0, sq:value(), math.deg(state:roll_angle())),
-                alt_controller:update(0.0, 100, -state:pos():z(), math.deg(state:pitch_angle())),
+                alt_controller:update(
+                    100,
+                    -state:pos():z(),
+                    state:roll_angle(),
+                    state:pitch_angle()
+                ),
                 0
             )
             vehicle:set_rudder_offset(0, true)
@@ -695,7 +706,7 @@ files['experiments/roll_angle_controller_tuning'] = function(...)
     
     return Exp
 end
-files['experiments/speed_controller_tuning'] = function(...)
+files['experiments/exp3_speed_controller_tuning'] = function(...)
     
     local State = require('modules/state')
     local functions = require('modules/mappings/functions')
@@ -707,7 +718,7 @@ files['experiments/speed_controller_tuning'] = function(...)
     local sq = SQ.new(24, 10000, 4)
     
     local Exp = {}
-    function Exp.setup()
+    function Exp.setup(id, cmd)
         local self = {}
         local state = State.readCurrent()
     
@@ -715,7 +726,12 @@ files['experiments/speed_controller_tuning'] = function(...)
             vehicle:set_target_throttle_rate_rpy(
                 speed_controller:update(0.0, sq:value(), state:flow():length()),
                 roll_controller:update(0.0, 0, math.deg(state:roll_angle())),
-                alt_controller:update(0.0, 100, -state:pos():z(), math.deg(state:pitch_angle())),
+                alt_controller:update(
+                    100,
+                    -state:pos():z(),
+                    state:roll_angle(),
+                    state:pitch_angle()
+                ),
                 0
             )
             vehicle:set_rudder_offset(0, true)
@@ -736,14 +752,136 @@ files['experiments/speed_controller_tuning'] = function(...)
     
 
 end
+files['modules/controllers/yaw_controller'] = function(...)
+    local PID = require('modules/controllers/pid')
+    local PT = require('modules/param_table')
+    
+    local pt = PT.new(75, "SCRTYAW_", 6)
+    
+    local kFF = pt:param('kFF', 0)
+    local kP = pt:param('kP', 2.5)
+    local kI = pt:param('kI', 0.3)
+    local kD = pt:param('kD', 0.0)
+    local min = pt:param('min', -90)
+    local max = pt:param('max', 90)
+    
+    
+    local controller = PID.new('TYAW', kFF, kP, kI, kD, min, max)
+    
+    return controller
+end
+files['experiments/exp4_yaw_controller_tuning'] = function(...)
+    
+    local State = require('modules/state')
+    local functions = require('modules/mappings/functions')
+    local SQ = require('modules/square_wave')
+    
+    local roll_controller = require('modules/controllers/roll_angle_controller')
+    local speed_controller = require('modules/controllers/speed_controller')
+    local alt_controller = require('modules/controllers/alt_controller')
+    local yaw_controller = require('modules/controllers/yaw_controller')
+    local sq = SQ.new(0, 5000, 2)
+    
+    local Exp = {}
+    local initial_state=nil
+    function Exp.setup(id, cmd)
+        local self = {}
+        local state = State.readCurrent()
+    
+        function self:run()
+            if initial_state then
+                vehicle:set_target_throttle_rate_rpy(
+                    speed_controller:update(0.0, 22, state:flow():length()),
+                    roll_controller:update(0.0, 0, math.deg(state:roll_angle())),
+                    alt_controller:update(
+                        -initial_state:pos():z(),
+                        -state:pos():z(),
+                        state:roll_angle(),
+                        state:pitch_angle()
+                    ),
+                    yaw_controller:update(0.0, sq:value(), -state:flow():y())
+                )
+                vehicle:set_rudder_offset(0, true)
+            end
+        end
+    
+        function self:reset()
+            sq:reset()
+            speed_controller:reset(SRV_Channels:get_output_scaled(functions.throttle))
+            alt_controller:reset()
+            roll_controller:reset()
+            yaw_controller:reset()
+            initial_state = state
+        end
+    
+        return self
+    end
+    
+    return Exp
+    
+    
+
+end
+files['experiments/exp5_alt_controller_ff'] = function(...)
+    local State = require('modules/state')
+    local functions = require('modules/mappings/functions')
+    local SQ = require('modules/square_wave')
+    
+    local roll_controller = require('modules/controllers/roll_angle_controller')
+    local alt_controller = require('modules/controllers/alt_controller')
+    local speed_controller = require('modules/controllers/speed_controller')
+    local yaw_controller = require('modules/controllers/yaw_controller')
+    local sq = SQ.new(0, 6000, 60)
+    
+    local Exp = {}
+    
+    local initial_state=nil
+    
+    function Exp.setup(id, cmd)
+        local self = {}
+        local state = State.readCurrent()
+    
+        function self:run()
+            if initial_state then
+                vehicle:set_target_throttle_rate_rpy(
+                    speed_controller:update(0, initial_state:arspd(), state:arspd()),
+                    roll_controller:update(0.0, sq:value(), math.deg(state:roll_angle())),
+                    alt_controller:update(
+                        -initial_state:pos():z(),
+                        -state:pos():z(),
+                        state:roll_angle(),
+                        state:pitch_angle()
+                    ),
+                    yaw_controller:update(0, 0, -state:flow():y())
+                )
+                vehicle:set_rudder_offset(0, true)
+            end
+        end
+    
+        function self:reset()
+            sq:reset()
+            alt_controller:reset()
+            roll_controller:reset()
+            speed_controller:reset(SRV_Channels:get_output_scaled(functions.throttle))
+            yaw_controller:reset()
+            initial_state = state
+        end
+    
+        return self
+    end
+    
+    return Exp
+end
 local flightmodes = require('modules/mappings/modes')
 local PT = require('modules/param_table')
 
 local experiments = {}
-experiments[0] = require('experiments/pitch_angle_controller_tuning')
-experiments[1] = require('experiments/alt_controller_tuning')
-experiments[2] = require('experiments/roll_angle_controller_tuning')
-experiments[3] = require('experiments/speed_controller_tuning')
+experiments[0] = require('experiments/exp0_pitch_angle_controller_tuning')
+experiments[1] = require('experiments/exp1_alt_controller_tuning')
+experiments[2] = require('experiments/exp2_roll_angle_controller_tuning')
+experiments[3] = require('experiments/exp3_speed_controller_tuning')
+experiments[4] = require('experiments/exp4_yaw_controller_tuning')
+experiments[5] = require('experiments/exp5_alt_controller_ff')
 
 
 local pt = PT.new(69, "SCRTEXP_", 6)
@@ -754,7 +892,7 @@ function update()
     if vehicle:get_mode() == flightmodes.AUTO and arming:is_armed() then
         local id, cmd, arg1, arg2, arg3, arg4 = vehicle:nav_script_time()
 
-        local exp = experiments[expid:get()].setup()
+        local exp = experiments[expid:get()].setup(id, cmd)
 
         if cmd then
             exp:run()

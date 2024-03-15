@@ -50,7 +50,7 @@ function PID.new(name, kFF, kP,kI,kD,min,max)
 
    local _t = nil
    local _err = nil
-   local _total = (self:min() + self:max()) / 2
+   local _total = _I
 
    function self:update(ff, target, current)
       local t = millis():tofloat() * 0.001

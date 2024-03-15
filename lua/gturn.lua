@@ -20,12 +20,13 @@ local stagetimer = 0
 
 local load_factor = 1.0
 
+
 function update()
 
     if vehicle:get_mode() == MODE_AUTO and arming:is_armed() then
-        
+
         local id, cmd, arg1, arg2, arg3, arg4 = vehicle:nav_script_time()
-        
+
         if cmd then
             if turn then
 
@@ -78,9 +79,11 @@ function update()
 
             else
                 load_factor = 1.0
-                local lf =  1.2 + 0.4 * ((id-1) % 5)
-                local arsp = 15 + 3 * math.floor((id-1) / 5)
-                turn = Turn.initialise(id, cmd, lf, arsp)
+                turn = Turn.new(
+                    1.2 + 0.4 * ((id-1) % 5),
+                    ahrs:get_relative_position_NED_origin():z(),
+                    15 + 3 * math.floor((id-1) / 5)
+                )
                 speed_controller:reset()
                 pitch_controller:reset()
                 rollangle_controller:reset()

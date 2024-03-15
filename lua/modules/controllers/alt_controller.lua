@@ -5,10 +5,11 @@ local pa_alt_controller = require('modules/controllers/pa_alt_controller')
 local cnt = {}
 
 
-function cnt:update(ff, target_alt, current_alt, current_pitch)
+function cnt:update(target_alt, current_alt, current_roll, current_pitch)
+    local ff = -1 / math.cos(math.rad(current_roll))
     local pitch_target = pa_alt_controller:update(ff, target_alt, current_alt)
 
-    return pitch_controller:update(0, pitch_target, current_pitch)
+    return pitch_controller:update(0, pitch_target, math.deg(current_pitch))
 end
 
 function cnt:reset()

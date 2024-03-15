@@ -9,7 +9,7 @@ local alt_controller = require('modules/controllers/alt_controller')
 local sq = SQ.new(0, 5000, 10)
 
 local Exp = {}
-function Exp.setup()
+function Exp.setup(id, cmd)
     local self = {}
     local state = State.readCurrent()
 
@@ -17,7 +17,12 @@ function Exp.setup()
         vehicle:set_target_throttle_rate_rpy(
             speed_controller:update(0.0, 22, state:flow():length()),
             roll_controller:update(0.0, sq:value(), math.deg(state:roll_angle())),
-            alt_controller:update(0.0, 100, -state:pos():z(), math.deg(state:pitch_angle())),
+            alt_controller:update(
+                100,
+                -state:pos():z(),
+                state:roll_angle(),
+                state:pitch_angle()
+            ),
             0
         )
         vehicle:set_rudder_offset(0, true)

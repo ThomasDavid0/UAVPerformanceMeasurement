@@ -3,17 +3,16 @@ from matplotlib import use as use_agg
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 import PySimpleGUI as sg
-from droneinterface import Vehicle, mavlink, Watcher
 import livematplot as lm
+from droneinterface import Vehicle, mavlink, Watcher
+
 
 vehicle = Vehicle.connect('tcp:127.0.0.1:5762', 1, input=False, retries=20)
 vehicle.wait_for_test(lambda : vehicle.get_SysStatus().can_arm)
 vehicle.arm()
 vehicle.set_mode(mavlink.PLANE_MODE_AUTO)
 
-msg = vehicle.get_custompidstate(None)
-print(msg.data)
-
+vehicle.request_message(228)
 watcher = Watcher(lambda : vehicle.next_custompidstate(0.5).data, 5000, None)
 
 def get_data(controller):
@@ -36,7 +35,7 @@ layout = [
     [sg.Graph((640, 480), (0, 0), (640, 480), key='Graph1')],
     [
         sg.Combo(
-            ['TPAN', 'TPAL', 'TRAN', 'TSPD'], 
+            ['TPAN', 'TPAL', 'TRAN', 'TSPD', 'TYAW'],
             readonly=True, 
             enable_events=True, 
             key='controller', 
