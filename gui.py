@@ -1,4 +1,4 @@
-#!/home/td6834/mambaforge/envs/dint/bin/python
+#!/home/tom/mambaforge/envs/droneinterface/bin/python
 from matplotlib import use as use_agg
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
