@@ -6,36 +6,6 @@ local require = function(name)
     end
     return loaded_files[name]
 end
-files['modules/mappings/modes'] = function(...)
-    local flightmodes = {
-        MANUAL = 0,
-        CIRCLE = 1,
-        STABILIZE = 2,
-        TRAINING = 3,
-        ACRO = 4,
-        FBWA = 5,
-        FBWB = 6,
-        CRUISE = 7,
-        AUTOTUNE = 8,
-        AUTO = 10,
-        RTL = 11,
-        LOITER = 12,
-        TAKEOFF = 13,
-        AVOID_ADSB = 14,
-        GUIDED = 15,
-        QSTABILIZE = 17,
-        QHOVER = 18,
-        QLOITER = 19,
-        QLAND = 20,
-        QRTL = 21,
-        QAUTOTUNE = 22,
-        QACRO = 23,
-        THERMAL = 24,
-        LOITER_TO_QLAND = 25,
-    }
-    
-    return flightmodes
-end
 files['modules/geometry/point'] = function(...)
     
     
@@ -432,17 +402,30 @@ files['modules/state'] = function(...)
     
     return State
 end
-local flightmodes = require('modules/mappings/modes')
+
 local State = require('modules/state')
 
+
+local _mid = 1
+
 function update()
-    if vehicle:get_mode() == flightmodes.AUTO and arming:is_armed() then
-        local state = State.readCurrent()
-        gcs:send_named_float("st_arspd", state:arspd())
-        gcs:send_named_float("st_flow", state:flow():length())
-        gcs:send_named_float("st_w_spd", state:wind():length())
+    if ahrs:get_velocity_NED() == nil then
+        return update, 1000.0/40
     end
-    return update, 250
+    
+    local state = State.readCurrent()
+    if _mid==0 then
+        gcs:send_named_float('roll_angle', math.deg(state:roll_angle()))
+        _mid = 1
+    else
+        gcs:send_named_float('pitch_angle', math.deg(state:pitch_angle()))
+        _mid=0
+    end
+    
+    
+    
+    return update, 1000.0/40
 end
+
 
 return update()
