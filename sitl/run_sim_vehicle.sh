@@ -1,4 +1,4 @@
-sim_vehicle.py -v ArduPlane --console --map \
+sim_vehicle.py -v ArduPlane --console \
     --custom-location=51.423419263383636,-2.671503820236826,116.9,80 \
     -f jsbsim \
     --add-param-file=parameters.parm #\

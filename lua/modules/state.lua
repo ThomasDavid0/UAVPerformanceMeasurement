@@ -14,7 +14,7 @@ function State.new(pos, att, arspd, vel, acc, wind)
     local _acc = acc
     local _wind = wind
 
-    local _body_wind = _att:transform_point(_wind)
+    local _body_wind = _att:inverse():transform_point(_wind)
     local _flow = P.sub(_vel, _body_wind)
     local _hv = _att:transform_point(P.xyz(1,0,0))
     local _yaw = math.atan(_hv:y(), _hv:x())

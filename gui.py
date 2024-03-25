@@ -6,8 +6,8 @@ import PySimpleGUI as sg
 import livematplot as lm
 from droneinterface import Vehicle, mavlink, Watcher
 
-
 vehicle = Vehicle.connect('tcp:127.0.0.1:5762', 1, input=False, retries=20)
+
 vehicle.wait_for_test(lambda : vehicle.get_SysStatus().can_arm)
 vehicle.arm()
 vehicle.set_mode(mavlink.PLANE_MODE_AUTO)
@@ -70,7 +70,7 @@ pack_figure(graph1, fig1)
 lines = lm.create_traces(axs, tri, get_data('TPAN'))
 fig1.canvas.draw()
 
-while True:
+while vehicle.conn.is_alive():
     event, values = window.read(timeout=100)
     if event == sg.WIN_CLOSED or event == 'Exit':
         break
