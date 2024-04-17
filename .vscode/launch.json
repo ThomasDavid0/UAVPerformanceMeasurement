@@ -10,6 +10,15 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal"
+        },
+        {
+            "name": "SITL GUI Debugger",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "gcs/gui.py",
+            "console": "integratedTerminal",
+            "args": ["-m", "tcp:0.0.0.0:5762", "--takeoff", "--timeout", "5"]
+
         }
     ]
 }

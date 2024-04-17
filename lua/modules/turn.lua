@@ -33,6 +33,9 @@ function Turn.new(id, load_factor, alt, arspd)
     function self:roll_angle()
         return _roll_angle
     end
+    function self:roll_angle_deg()
+        return math.deg(_roll_angle)
+    end
     function self:start_time()
         return _start_time
     end
@@ -44,8 +47,6 @@ function Turn.new(id, load_factor, alt, arspd)
             _arspd
         )
     end
-
-    gcs:send_text(6, self:summary())
 
     return self
 end

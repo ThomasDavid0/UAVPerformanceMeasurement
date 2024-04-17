@@ -84,6 +84,14 @@ function PID.new(name, kFF, kP,kI,kD,min,max)
       return _total
    end
 
+   function self:I()
+      return _I
+   end
+
+   function self:total()
+      return _total
+   end
+
    function self:reset(value)
       if value == nil then
          value = (self:min() + self:max()) / 2

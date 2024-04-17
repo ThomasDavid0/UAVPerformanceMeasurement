@@ -14,7 +14,7 @@ function update()
         gcs:send_named_float('roll_angle', math.deg(state:roll_angle()))
         _mid = 1
     else
-        gcs:send_named_float('pitch_angle', math.deg(state:pitch_angle()))
+        gcs:send_named_float('pitch_angl', math.deg(state:pitch_angle()))
         _mid=0
     end
     

@@ -43,9 +43,16 @@ function State.new(pos, att, arspd, vel, acc, wind)
     function self:roll_angle()
         return _roll_angle
     end
+    function self:roll_angle_deg()
+        return math.deg(_roll_angle)
+    end
     function self:pitch_angle()
         return _pitch
     end
+    function self:pitch_angle_deg()
+        return math.deg(_pitch)
+    end
+
     function self:flow()
         return _flow
     end
